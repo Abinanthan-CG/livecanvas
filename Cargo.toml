@@ -1,0 +1,32 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/livecanvas-core",
+    "crates/livecanvas",
+    "crates/livecanvas-setup",
+]
+
+[workspace.package]
+version = "1.0.0"
+edition = "2021"
+license = "MIT"
+rust-version = "1.82"
+
+[workspace.dependencies]
+livecanvas-core = { path = "crates/livecanvas-core" }
+serde = { version = "1", features = ["derive"] }
+toml = "1"
+windows-core = "0.62"
+windows-registry = "0.6"
+webview2-com = "0.39.1"
+embed-manifest = "1.5"
+
+# Size- and startup-optimised release build. `panic = "abort"` is deliberate:
+# the process shares an input queue with explorer.exe (see desktop.rs), so on a
+# bug we want to die immediately instead of unwinding through FFI callbacks.
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

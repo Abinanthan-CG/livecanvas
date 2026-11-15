@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>LiveCanvas demo</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #071318; color: #d7ece8;
+    font: 15px/1.5 "Segoe UI Variable", "Segoe UI", system-ui, sans-serif; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  .panel { position: fixed; right: 48px; bottom: 96px; width: 300px; padding: 20px 22px;
+    background: rgba(7, 19, 24, .72); border: 1px solid rgba(120, 220, 205, .28); border-radius: 14px;
+    backdrop-filter: blur(10px); }
+  .clock { font-size: 44px; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .date { color: #8fb8b1; margin-bottom: 14px; }
+  dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 14px; margin: 0 0 14px; font-size: 13px; }
+  dt { color: #8fb8b1; } dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+  input { width: 100%; box-sizing: border-box; padding: 9px 11px; color: inherit; font: inherit;
+    background: rgba(255, 255, 255, .06); border: 1px solid rgba(120, 220, 205, .35); border-radius: 8px; }
+  input:focus { outline: 2px solid #4fe0c8; outline-offset: 1px; }
+  input::placeholder { color: #7ba39c; }
+</style>
+</head>
+<body>
+<canvas id="field" aria-hidden="true"></canvas>
+<section class="panel" aria-label="LiveCanvas status">
+  <div class="clock" id="clock">00:00</div>
+  <div class="date" id="date"></div>
+  <dl>
+    <dt>Pointer</dt><dd id="pointer">move the mouse</dd>
+    <dt>Clicks</dt><dd id="clicks">0</dd>
+    <dt>Scroll</dt><dd id="scroll">hue 170</dd>
+  </dl>
+  <label for="note" style="display:block;font-size:13px;color:#8fb8b1;margin-bottom:6px">Keyboard test</label>
+  <input id="note" placeholder="Click here, then type" autocomplete="off" spellcheck="false">
+</section>
+<script>
+(() => {
+  const canvas = document.getElementById('field');
+  const ctx = canvas.getContext('2d');
+  const $ = (id) => document.getElementById(id);
+  const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const pointer = { x: -9999, y: -9999, down: false };
+  const ripples = [];
+  let points = [], hue = 170, clicks = 0, width = 0, height = 0;
+
+  function resize() {
+    const ratio = devicePixelRatio || 1;
+    width = innerWidth; height = innerHeight;
+    canvas.width = width * ratio; canvas.height = height * ratio;
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    const count = Math.min(calm ? 60 : 170, Math.round(width * height / 12000));
+    points = Array.from({ length: count }, () => ({
+      x: Math.random() * width, y: Math.random() * height,
+      vx: (Math.random() - .5) * .35, vy: (Math.random() - .5) * .35,
+    }));
+  }
+
+  function frame() {
+    ctx.fillStyle = '#071318';
+    ctx.fillRect(0, 0, width, height);
+    for (const p of points) {
+      // Points drift, are attracted while a button is held and repelled on hover.
+      const dx = p.x - pointer.x, dy = p.y - pointer.y, dist = Math.hypot(dx, dy) || 1;
+      if (dist < 180) {
+        const force = (pointer.down ? -0.06 : 0.035) * (1 - dist / 180);
+        p.vx += dx / dist * force; p.vy += dy / dist * force;
+      }
+      p.vx *= .992; p.vy *= .992;
+      p.x = (p.x + p.vx + width) % width; p.y = (p.y + p.vy + height) % height;
+    }
+    ctx.lineWidth = 1;
+    for (let i = 0; i < points.length; i++) {
+      const a = points[i];
+      for (let j = i + 1; j < points.length; j++) {
+        const b = points[j], d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (d < 130) {
+          ctx.strokeStyle = `hsla(${hue}, 70%, 62%, ${(1 - d / 130) * .38})`;
+          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+        }
+      }
+      ctx.fillStyle = `hsl(${hue}, 75%, 68%)`;
+      ctx.beginPath(); ctx.arc(a.x, a.y, 1.8, 0, Math.PI * 2); ctx.fill();
+    }
+    for (let i = ripples.length - 1; i >= 0; i--) {
+      const r = ripples[i];
+      r.radius += 5; r.alpha -= .018;
+      if (r.alpha <= 0) { ripples.splice(i, 1); continue; }
+      ctx.strokeStyle = `hsla(${hue}, 85%, 70%, ${r.alpha})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2); ctx.stroke();
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function tick() {
+    const now = new Date();
+    $('clock').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    $('date').textContent = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+  }
+
+  addEventListener('resize', resize);
+  addEventListener('mousemove', (e) => {
+    pointer.x = e.clientX; pointer.y = e.clientY;
+    $('pointer').textContent = `${e.clientX}, ${e.clientY}`;
+  });
+  addEventListener('mouseleave', () => { pointer.x = pointer.y = -9999; $('pointer').textContent = 'outside'; });
+  addEventListener('mousedown', (e) => {
+    pointer.down = true;
+    ripples.push({ x: e.clientX, y: e.clientY, radius: 4, alpha: .9 });
+    $('clicks').textContent = String(++clicks);
+  });
+  addEventListener('mouseup', () => { pointer.down = false; });
+  addEventListener('wheel', (e) => {
+    hue = (hue + Math.sign(e.deltaY) * 12 + 360) % 360;
+    $('scroll').textContent = `hue ${hue}`;
+  }, { passive: true });
+
+  resize(); tick(); setInterval(tick, 1000); requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+[package]
+name = "livecanvas-setup"
+description = "Per-user installer and uninstaller for LiveCanvas (no administrator rights required)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+build = "build.rs"
+
+[target.'cfg(windows)'.dependencies]
+windows-registry = { workspace = true }
+
+[target.'cfg(windows)'.dependencies.windows]
+version = "0.62"
+features = [
+    "Win32_Foundation",
+    "Win32_System_Com",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+]
+
+[build-dependencies]
+embed-manifest = { workspace = true }
