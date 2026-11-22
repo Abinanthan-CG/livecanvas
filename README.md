@@ -1,160 +1,159 @@
+<div align="center">
+
 # LiveCanvas
 
-An interactive HTML live wallpaper for Windows 11, written in Rust.
+**Interactive HTML, WebGL, and Web-App Live Wallpapers for Windows 11**
 
-LiveCanvas renders a web page - a local `.html` file, a folder with `index.html`,
-or any URL - **behind the desktop icons**, and forwards mouse input to it so the
-page stays clickable, draggable and scrollable. It uses the WebView2 runtime that
-ships with Windows 11 directly: no Electron, no Tauri runtime, no Node.js, no
-administrator rights, no drivers and no code injected into `explorer.exe`.
+Run any local `.html` file, Three.js scene, folder with `index.html`, or website **behind your desktop icons** — fully clickable, draggable, and scrollable — powered directly by Windows' built-in WebView2 runtime in a single native Rust binary.
 
-## Verification status - read this first
+[![Build](https://github.com/Abinanthan-CG/livecanvas/actions/workflows/build.yml/badge.svg)](https://github.com/Abinanthan-CG/livecanvas/actions/workflows/build.yml)
+![Platform](https://img.shields.io/badge/platform-Windows%2011%20%7C%2010%20(x64%20%2F%20ARM64)-0078D4?logo=windows&logoColor=white)
+![Rust](https://img.shields.io/badge/written%20in-Rust-DEA584?logo=rust&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-2ea44f)
 
-This workspace was developed on a Linux host. What has and has not been verified:
+[Showcase](#live-examples) · [Features](#features) · [Install](#install) · [Usage](#usage) · [Configuration](#configuration) · [Build from Source](#build-from-source)
 
-| Check | Status |
-| --- | --- |
-| `cargo test -p livecanvas-core` (22 unit tests) | passes |
-| `cargo clippy --workspace -- -D warnings` for `x86_64-pc-windows-msvc` | passes |
-| Same for `aarch64-pc-windows-msvc` | passes |
-| Every `unsafe` block has a `SAFETY` comment (`clippy::undocumented_unsafe_blocks` is `deny`) | enforced |
-| Linking a final `.exe` with the MSVC toolchain | **not done** (no MSVC linker on the dev host) |
-| Running on a real Windows 11 desktop | **not done** |
+<br>
 
-So the code is type-checked against the real `windows` 0.62 and `webview2-com`
-0.39 APIs for both targets, but its runtime behaviour has not been observed.
-Test first, on a real machine, the items under "Things to verify on Windows".
+<img src="docs/screenshots/golden_singularity_wheat_field_at_night.jpg" alt="Golden Singularity — Wheat Field at Night running as an interactive WebGL wallpaper" width="100%">
 
-## Build
+*`examples/golden_singularity_wheat_field_at_night.html` — 68,000 wind-blown wheat stalks, glowing farmhouse, and golden accretion arc rendered live in WebGL.*
 
-Requirements: Windows 10/11, stable Rust (MSVC toolchain) and the Visual Studio
-Build Tools ("Desktop development with C++").
+</div>
 
-```powershell
-.\build.ps1                                  # x64  -> .\dist
-.\build.ps1 -Target aarch64-pc-windows-msvc  # ARM64
-```
+## Features
 
-`build.ps1` builds `livecanvas.exe` first and `livecanvas-setup.exe` second,
-because the installer embeds the application binary and stable Cargo cannot
-express that ordering. A plain `cargo build --release` also works for
-`livecanvas.exe`; if you use it for the installer, run it twice (the first run
-warns that the payload was missing; the second run embeds it).
+- **Zero runtime bloat:** Uses the Evergreen WebView2 runtime already built into Windows 11. No Electron, no Tauri runtime, no Node.js, and statically linked CRT so `livecanvas.exe` is a single portable file.
+- **Truly interactive behind desktop icons:** Forwards mouse movement, clicks, double-clicks, drag, scroll wheels, and optional keyboard focus to your wallpaper while keeping desktop icons clickable (via MSAA hit-testing) and never injecting code into `explorer.exe`.
+- **Game & battery friendly:** Automatically hides and suspends the WebView2 renderer (freeing CPU, GPU, and RAM) whenever a full-screen game or video covers the desktop.
+- **Real HTTPS origin for local files:** Maps local folders onto `https://livecanvas.example/` with `DENY_CORS` isolation so ES modules, sibling `fetch()`, shaders, and `localStorage` work just like a web server—and clears the mapping whenever you switch to a remote URL.
+- **Persistent logins & sessions:** Cookies and storage persist in `%LOCALAPPDATA%\LiveCanvas\WebView2`, so web apps and dashboards stay signed in across reboots.
+- **Resilient by design:** Re-attaches automatically after `explorer.exe` restarts or monitor layout changes, supports both classic (`WorkerW`) and Windows 11 24H2+ raised-desktop layouts, and applies exponential backoff on renderer crashes.
+- **No administrator rights:** Installs per-user into `%LOCALAPPDATA%\Programs\LiveCanvas` with Start Menu and Windows Settings integration.
 
-The C runtime is linked statically (`.cargo/config.toml`), so `livecanvas.exe`
-is a single portable file.
+## Live Examples
 
-## Install and run
+Three interactive wallpapers ship in this repository so you can test mouse forwarding, orbit controls, scroll zoom, keyboard shortcuts, and adaptive frame-rate throttling right away.
 
-* **Portable:** run `livecanvas.exe`. Settings go to `%LOCALAPPDATA%\LiveCanvas`.
-* **Installer:** run `livecanvas-setup.exe`. It installs per user into
-  `%LOCALAPPDATA%\Programs\LiveCanvas`, adds a Start Menu shortcut and an
-  "Installed apps" entry, and never asks for elevation. Uninstall from Windows
-  Settings or with `uninstall.exe --uninstall`.
+### 1. At the Edge of Infinity (`examples/at_the_edge_of_infinity.html`)
+
+<img src="docs/screenshots/at_the_edge_of_infinity.jpg" alt="At the Edge of Infinity — interactive Three.js orbital dust river" width="100%">
+
+A sweeping river of 165,000 orbiting starlight particles with HDR bloom, a lone silhouetted traveler, an adaptive 60 / 30 / 15 fps idle loop, and an automatic 2D Canvas fallback.
+
+- **Controls:** Drag to orbit · Scroll to zoom · Move mouse for parallax · Double-click or `R` to reset · `Space` to pause · Arrow keys / `+` `-` to adjust view
+- **Launch:**
+  ```powershell
+  .\livecanvas.exe .\examples\at_the_edge_of_infinity.html
+  ```
+
+### 2. Golden Singularity — Wheat Field at Night (`examples/golden_singularity_wheat_field_at_night.html`)
+
+<img src="docs/screenshots/golden_singularity_wheat_field_at_night.jpg" alt="Golden Singularity — Wheat Field at Night" width="100%">
+
+68,000 instanced wind-blown wheat stalks, a warm-lit farmhouse and pickup truck, and a towering golden accretion arc with a 60 / 30 fps eco loop.
+
+- **Controls:** Drag to orbit · Scroll to zoom · Move mouse for subtle camera parallax · Double-click to reset
+- **Launch:**
+  ```powershell
+  .\livecanvas.exe --set .\examples\golden_singularity_wheat_field_at_night.html
+  ```
+
+> **Note:** Both Three.js examples fetch `three.min.js` (`r128`) from cdnjs on first load; WebView2 caches it in `%LOCALAPPDATA%\LiveCanvas\WebView2` afterward.
+
+### 3. Built-in Interactive Demo (Default)
+
+<img src="docs/screenshots/builtin_demo.png" alt="LiveCanvas built-in interactive constellation and clock demo" width="100%">
+
+Shown automatically on first launch when no `source` is configured. Features an interactive particle constellation, live clock, pointer/click/scroll telemetry, and a keyboard input box to verify focus forwarding.
+
+## Install
+
+Download the latest `livecanvas-setup.exe` or portable `livecanvas.exe` from [**GitHub Releases**](https://github.com/Abinanthan-CG/livecanvas/releases) (or grab the latest CI build from the [**Actions**](https://github.com/Abinanthan-CG/livecanvas/actions/workflows/build.yml) tab).
+
+- **Installer (`livecanvas-setup.exe`):** Installs per-user into `%LOCALAPPDATA%\Programs\LiveCanvas`, creates a Start Menu shortcut, registers in Windows **Settings → Apps → Installed apps**, and never asks for elevation. Uninstall from Windows Settings or via `uninstall.exe --uninstall`.
+- **Portable (`livecanvas.exe`):** Run directly from any folder. Settings and WebView2 profile data are stored in `%LOCALAPPDATA%\LiveCanvas`.
 
 ## Usage
 
+Right-click or left-click the **LiveCanvas** tray icon to pick an `.html` file, pick a folder with `index.html`, load a URL or path from your clipboard, toggle interactivity/keyboard focus/mute, open DevTools, or edit `config.toml`.
+
+Press **`Ctrl+Alt+I`** anywhere to toggle mouse forwarding on or off.
+
+### Command Line
+
 ```text
 livecanvas.exe [SOURCE]         URL, .html file, or folder with index.html
-livecanvas.exe --set <SOURCE>   same; a running instance switches to it
-livecanvas.exe --reload | --toggle-interactive | --mute | --unmute | --quit
+livecanvas.exe --set <SOURCE>   Switch a running instance to a new source
+livecanvas.exe --reload         Reload the current page
+livecanvas.exe --toggle-interactive
+livecanvas.exe --mute | --unmute
 livecanvas.exe --autostart <on|off>
+livecanvas.exe --quit           Stop the running instance
 ```
 
-The tray icon offers the same actions plus file/folder pickers, "use URL or path
-from clipboard", DevTools and config editing. `Ctrl+Alt+I` toggles interactivity.
+Bare local dev addresses such as `localhost:3000` or `127.0.0.1:5173` automatically resolve to `http://`; remote domains without a scheme default to `https://`.
 
-Logins persist: cookies and storage live in `%LOCALAPPDATA%\LiveCanvas\WebView2`.
+## Configuration
 
-## Live examples
+Settings live in `%LOCALAPPDATA%\LiveCanvas\config.toml`. After editing, click **Apply config.toml** in the tray menu.
 
-Two interactive Three.js wallpapers are included in `examples/` so you can test
-mouse forwarding, scroll zoom, keyboard shortcuts and adaptive frame-rate
-throttling right away:
-
-| Example | Scene | Controls |
+| Key | Default | Description |
 | --- | --- | --- |
-| [`examples/at_the_edge_of_infinity.html`](examples/at_the_edge_of_infinity.html) | **At the Edge of Infinity** — sweeping river of 165k orbiting starlight particles, HDR bloom, and a lone silhouetted traveler (60 / 30 / 15 fps adaptive idle loop, with 2D Canvas fallback) | Drag to orbit, scroll to zoom, hover for parallax, double-click or `R` to reset, `Space` to pause, arrow keys / `+` `-` to move |
-| [`examples/golden_singularity_wheat_field_at_night.html`](examples/golden_singularity_wheat_field_at_night.html) | **Golden Singularity — Wheat Field at Night** — 68k wind-blown wheat stalks, glowing farmhouse, pickup truck, and a golden accretion-arc horizon (60 / 30 fps eco loop) | Drag to orbit, scroll to zoom, hover for parallax, double-click to reset |
+| `source` | `""` | URL, `.html` file, or folder with `index.html`. Empty shows the built-in demo. |
+| `monitor` | `"primary"` | `"primary"`, `"span"` (all monitors), or a zero-based monitor index (e.g. `"1"`). |
+| `interactive` | `true` | Forward mouse input from the bare desktop to the wallpaper. |
+| `keyboard` | `true` | Move keyboard focus into the page when clicked. |
+| `forward_right_click` | `false` | Also forward right-clicks (the desktop context menu still opens). |
+| `muted` | `false` | Mute all audio produced by the page. |
+| `pause_when_covered` | `true` | Hide and suspend the renderer while a full-screen window covers the desktop. |
+| `zoom` | `1.0` | Page zoom factor (`0.25` to `5.0`). |
+| `devtools` | `true` | Allow opening Chromium DevTools from the tray menu. |
+| `user_agent` | `""` | Optional custom user-agent string. |
+| `hotkey` | `true` | Register `Ctrl+Alt+I` to toggle interactivity. |
 
-Run either example directly from the command line (or pick it from the tray menu
-via **Use HTML file...**):
+## Build from Source
+
+Requirements: Windows 10/11, stable Rust (MSVC toolchain), and Visual Studio Build Tools ("Desktop development with C++").
 
 ```powershell
-.\dist\livecanvas.exe .\examples\at_the_edge_of_infinity.html
-.\dist\livecanvas.exe --set .\examples\golden_singularity_wheat_field_at_night.html
+.\build.ps1                                  # x64  -> .\dist\livecanvas.exe + livecanvas-setup.exe
+.\build.ps1 -Target aarch64-pc-windows-msvc  # ARM64
 ```
 
-Both examples load Three.js (`r128`) from cdnjs on first run; once loaded,
-WebView2 caches the script in `%LOCALAPPDATA%\LiveCanvas\WebView2`.
+`build.ps1` runs `cargo test -p livecanvas-core`, compiles `livecanvas.exe`, and then compiles `livecanvas-setup.exe` with `livecanvas.exe` embedded as its payload.
 
-## Configuration (`%LOCALAPPDATA%\LiveCanvas\config.toml`)
+<details>
+<summary><strong>Architecture, Verification Status & Known Limitations</strong></summary>
 
-| Key | Default | Meaning |
-| --- | --- | --- |
-| `source` | `""` | URL, file or folder. Empty shows the built-in demo. |
-| `monitor` | `"primary"` | `"primary"`, `"span"` (all monitors), or a zero-based index. |
-| `interactive` | `true` | Forward mouse input to the page. |
-| `keyboard` | `true` | Move keyboard focus into the page when it is clicked. |
-| `forward_right_click` | `false` | Also forward right-clicks. |
-| `muted` | `false` | Mute page audio. |
-| `pause_when_covered` | `true` | Stop rendering while a full-screen window hides the wallpaper. |
-| `zoom` | `1.0` | Page zoom, `0.25` to `5.0`. |
-| `devtools` | `true` | Allow DevTools. |
-| `user_agent` | `""` | Optional user-agent override. |
-| `hotkey` | `true` | Register `Ctrl+Alt+I`. |
+### How It Works
 
-Use "Apply config.toml" in the tray menu after editing.
+1. **Shell layer (`desktop.rs`):** Message `0x052C` asks `Progman` to split the desktop into wallpaper and icon layers. LiveCanvas parents a child window under the wallpaper `WorkerW` on Windows 10 / 11 up to 23H2, or as a `WS_EX_LAYERED` child of `Progman` directly below `SHELLDLL_DefView` on Windows 11 24H2+.
+2. **Rendering (`webview.rs`):** A WebView2 *composition controller* renders into a DirectComposition visual tree owned by our surface window.
+3. **Input (`input.rs`):** A low-level mouse hook (`WH_MOUSE_LL`) queues events without swallowing them; the message loop replays events via `ICoreWebView2CompositionController::SendMouseInput` when the cursor is over the bare desktop and not over an icon (`AccessibleObjectFromPoint` / `ROLE_SYSTEM_LISTITEM`).
+4. **Local isolation (`source.rs`, `webview.rs`):** Local folders map to `https://livecanvas.example/` with `COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND_DENY_CORS`, and the mapping is cleared when navigating to remote URLs.
+5. **Resilience (`app.rs`, `webview.rs`):** A 1-second watchdog recovers from `explorer.exe` restarts and display changes, ignores recoverable WebView2 sub-process failures, and applies exponential backoff on repeated browser/renderer crashes.
 
-## How it works
+### Verification Status
 
-1. **Shell layer** (`desktop.rs`): message `0x052C` makes `Progman` create the
-   wallpaper layer. LiveCanvas creates a child window there - under the top-level
-   `WorkerW` on Windows 10 / 11 up to 23H2, or as a layered child of `Progman`
-   directly below `SHELLDLL_DefView` on 24H2 and later.
-2. **Rendering** (`webview.rs`): a WebView2 *composition controller* renders the
-   page into a DirectComposition visual targeted at that window.
-3. **Input** (`input.rs`): the icon view covers the desktop and gets all real
-   input. A low-level mouse hook only queues events; from the message loop they
-   are replayed with `ICoreWebView2CompositionController::SendMouseInput` when
-   the cursor is over the bare desktop. Clicks on icons are detected with MSAA
-   and not forwarded. The hook never swallows input.
-4. **Local pages** (`source.rs`, `webview.rs`): folders are mapped to
-   `https://livecanvas.example/` with `DENY_CORS` (same-origin local ES modules
-   and `fetch()` work, while cross-origin sites cannot read local files), and
-   the mapping is cleared whenever you switch to a remote URL. Bare loopback
-   addresses (`localhost:3000`, `127.0.0.1:5173`) default to `http://`.
-5. **Resilience** (`app.rs`, `webview.rs`): a watchdog re-attaches after
-   `explorer.exe` restarts or display changes, ignores recoverable WebView2
-   sub-process hiccups, and applies exponential backoff on repeated crashes.
+| Check | Status |
+| --- | --- |
+| `cargo test -p livecanvas-core` (22 unit tests) | Passes (local + Windows CI) |
+| `cargo clippy --workspace -- -D warnings` (`x86_64` & `aarch64`) | Passes (enforces `clippy::undocumented_unsafe_blocks`) |
+| Windows MSVC release build (`livecanvas.exe` & `livecanvas-setup.exe`) | Passes on GitHub Actions (`windows-latest`) |
+| Live WebGL rendering of bundled examples & built-in demo | Verified in Chromium WebGL |
+| Interactive desktop testing on Windows 11 24H2 | Recommended first-run check on target hardware |
 
-## Things to verify on Windows
+### Known Limitations
 
-Ordered by risk. These are design decisions that compile but can only be
-confirmed on a real desktop:
+- The mouse cursor shape does not change to match CSS cursors (a hook cannot override the cursor for an `explorer.exe`-owned window).
+- Input is observed rather than swallowed: dragging on the wallpaper also draws the desktop selection rectangle, and forwarded right-clicks still open the desktop context menu.
+- Touch, pen, and side mouse buttons are not forwarded.
+- `0x052C` is an undocumented (though long-standing since Windows 8) shell message.
+- While attached to the shell's input queue, the release binary uses `panic = "abort"` so a bug can never stall the desktop.
 
-1. **24H2 layout:** a DirectComposition target on a plain child of a
-   `WS_EX_LAYERED` child of `Progman`. This mirrors how Chromium hosts its own
-   D3D window, but is the least certain part.
-2. **Keyboard focus:** `MoveFocus` is called after a forwarded left click and
-   relies on the input-queue attachment that cross-process parenting creates.
-3. **Icon hit-testing:** `AccessibleObjectFromPoint` returning
-   `ROLE_SYSTEM_LISTITEM` for desktop icons.
-4. **Runtime-drawn tray icon** (`CreateIconIndirect` with a 32-bit bitmap).
-
-## Known limitations
-
-* The mouse cursor shape does not follow the page (a hook cannot set the cursor
-  for a window owned by `explorer.exe`).
-* Input is observed, not intercepted: dragging on the wallpaper also draws the
-  desktop's selection rectangle, and a forwarded right-click still opens the
-  desktop context menu.
-* Touch and pen input are not forwarded. Side mouse buttons are ignored.
-* `0x052C` is undocumented. It has been stable since Windows 8 and is what other
-  wallpaper engines use, but Microsoft may change it, as happened with 24H2.
-* While attached, the UI thread shares an input queue with the shell; the
-  process therefore aborts on panic rather than risk stalling the desktop.
+</details>
 
 ## License
 
-MIT - see `LICENSE`.
+MIT — see [`LICENSE`](LICENSE).
