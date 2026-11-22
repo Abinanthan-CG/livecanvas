@@ -14,7 +14,7 @@ This workspace was developed on a Linux host. What has and has not been verified
 
 | Check | Status |
 | --- | --- |
-| `cargo test -p livecanvas-core` (20 unit tests) | passes |
+| `cargo test -p livecanvas-core` (22 unit tests) | passes |
 | `cargo clippy --workspace -- -D warnings` for `x86_64-pc-windows-msvc` | passes |
 | Same for `aarch64-pc-windows-msvc` | passes |
 | Every `unsafe` block has a `SAFETY` comment (`clippy::undocumented_unsafe_blocks` is `deny`) | enforced |
@@ -66,6 +66,28 @@ from clipboard", DevTools and config editing. `Ctrl+Alt+I` toggles interactivity
 
 Logins persist: cookies and storage live in `%LOCALAPPDATA%\LiveCanvas\WebView2`.
 
+## Live examples
+
+Two interactive Three.js wallpapers are included in `examples/` so you can test
+mouse forwarding, scroll zoom, keyboard shortcuts and adaptive frame-rate
+throttling right away:
+
+| Example | Scene | Controls |
+| --- | --- | --- |
+| [`examples/at_the_edge_of_infinity.html`](examples/at_the_edge_of_infinity.html) | **At the Edge of Infinity** — sweeping river of 165k orbiting starlight particles, HDR bloom, and a lone silhouetted traveler (60 / 30 / 15 fps adaptive idle loop, with 2D Canvas fallback) | Drag to orbit, scroll to zoom, hover for parallax, double-click or `R` to reset, `Space` to pause, arrow keys / `+` `-` to move |
+| [`examples/golden_singularity_wheat_field_at_night.html`](examples/golden_singularity_wheat_field_at_night.html) | **Golden Singularity — Wheat Field at Night** — 68k wind-blown wheat stalks, glowing farmhouse, pickup truck, and a golden accretion-arc horizon (60 / 30 fps eco loop) | Drag to orbit, scroll to zoom, hover for parallax, double-click to reset |
+
+Run either example directly from the command line (or pick it from the tray menu
+via **Use HTML file...**):
+
+```powershell
+.\dist\livecanvas.exe .\examples\at_the_edge_of_infinity.html
+.\dist\livecanvas.exe --set .\examples\golden_singularity_wheat_field_at_night.html
+```
+
+Both examples load Three.js (`r128`) from cdnjs on first run; once loaded,
+WebView2 caches the script in `%LOCALAPPDATA%\LiveCanvas\WebView2`.
+
 ## Configuration (`%LOCALAPPDATA%\LiveCanvas\config.toml`)
 
 | Key | Default | Meaning |
@@ -97,10 +119,14 @@ Use "Apply config.toml" in the tray menu after editing.
    are replayed with `ICoreWebView2CompositionController::SendMouseInput` when
    the cursor is over the bare desktop. Clicks on icons are detected with MSAA
    and not forwarded. The hook never swallows input.
-4. **Local pages** (`source.rs`): folders are mapped to
-   `https://livecanvas.example/`, giving local pages a secure origin.
-5. **Resilience** (`app.rs`): a watchdog re-attaches after `explorer.exe`
-   restarts, display changes or a WebView2 process crash.
+4. **Local pages** (`source.rs`, `webview.rs`): folders are mapped to
+   `https://livecanvas.example/` with `DENY_CORS` (same-origin local ES modules
+   and `fetch()` work, while cross-origin sites cannot read local files), and
+   the mapping is cleared whenever you switch to a remote URL. Bare loopback
+   addresses (`localhost:3000`, `127.0.0.1:5173`) default to `http://`.
+5. **Resilience** (`app.rs`, `webview.rs`): a watchdog re-attaches after
+   `explorer.exe` restarts or display changes, ignores recoverable WebView2
+   sub-process hiccups, and applies exponential backoff on repeated crashes.
 
 ## Things to verify on Windows
 

@@ -46,7 +46,8 @@
   function resize() {
     const ratio = devicePixelRatio || 1;
     width = innerWidth; height = innerHeight;
-    canvas.width = width * ratio; canvas.height = height * ratio;
+    if (width === 0 || height === 0) return;
+    canvas.width = Math.round(width * ratio); canvas.height = Math.round(height * ratio);
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     const count = Math.min(calm ? 60 : 170, Math.round(width * height / 12000));
     points = Array.from({ length: count }, () => ({
@@ -66,14 +67,15 @@
         p.vx += dx / dist * force; p.vy += dy / dist * force;
       }
       p.vx *= .992; p.vy *= .992;
-      p.x = (p.x + p.vx + width) % width; p.y = (p.y + p.vy + height) % height;
+      p.x = ((p.x + p.vx) % width + width) % width; p.y = ((p.y + p.vy) % height + height) % height;
     }
     ctx.lineWidth = 1;
     for (let i = 0; i < points.length; i++) {
       const a = points[i];
       for (let j = i + 1; j < points.length; j++) {
-        const b = points[j], d = Math.hypot(a.x - b.x, a.y - b.y);
-        if (d < 130) {
+        const b = points[j], dx = a.x - b.x, dy = a.y - b.y, d2 = dx * dx + dy * dy;
+        if (d2 < 16900) {
+          const d = Math.sqrt(d2);
           ctx.strokeStyle = `hsla(${hue}, 70%, 62%, ${(1 - d / 130) * .38})`;
           ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
         }

@@ -36,6 +36,10 @@ jobs:
       - name: Cache cargo build
         uses: Swatinem/rust-cache@v2
 
+      - name: Clippy
+        shell: pwsh
+        run: cargo clippy --workspace -- -D warnings
+
       # Runs unit tests, then builds both binaries into .\dist
       # (see build.ps1 — the installer embeds the app as its payload).
       - name: Build

@@ -10,7 +10,7 @@
 //! the COM interface pointers are never shared across threads.
 
 use crate::util::{log, log_err, profile_dir, wide};
-use livecanvas_core::{Config, Navigation};
+use livecanvas_core::{Config, Navigation, VIRTUAL_HOST};
 use std::rc::Rc;
 use webview2_com::{
     CoreWebView2EnvironmentOptions, CreateCoreWebView2CompositionControllerCompletedHandler,
@@ -146,9 +146,20 @@ impl WebView {
 
             let mut token = 0i64;
             core.add_ProcessFailed(
-                &ProcessFailedEventHandler::create(Box::new(move |_, _| {
-                    log("webview process failed");
-                    crashed();
+                &ProcessFailedEventHandler::create(Box::new(move |_, args| {
+                    let mut kind = COREWEBVIEW2_PROCESS_FAILED_KIND::default();
+                    if let Some(args) = args {
+                        let _ = args.ProcessFailedKind(&mut kind);
+                    }
+                    log(&format!("webview process failed (kind={})", kind.0));
+                    if matches!(
+                        kind,
+                        COREWEBVIEW2_PROCESS_FAILED_KIND_BROWSER_PROCESS_EXITED
+                            | COREWEBVIEW2_PROCESS_FAILED_KIND_RENDER_PROCESS_EXITED
+                            | COREWEBVIEW2_PROCESS_FAILED_KIND_RENDER_PROCESS_UNRESPONSIVE
+                    ) {
+                        crashed();
+                    }
                     Ok(())
                 })),
                 &mut token,
@@ -182,14 +193,19 @@ impl WebView {
         let url = wide(&navigation.url);
         // SAFETY: COM calls on the UI thread; the wide strings outlive the calls.
         unsafe {
+            let core3 = self.core.cast::<ICoreWebView2_3>()?;
             if let Some(mapping) = &navigation.mapping {
                 let host = wide(mapping.host);
                 let folder = wide(&mapping.folder.to_string_lossy());
-                self.core.cast::<ICoreWebView2_3>()?.SetVirtualHostNameToFolderMapping(
+                core3.SetVirtualHostNameToFolderMapping(
                     PCWSTR(host.as_ptr()),
                     PCWSTR(folder.as_ptr()),
-                    COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND_ALLOW,
+                    COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND_DENY_CORS,
                 )?;
+            } else {
+                // Remove any previous local-folder mapping so remote pages cannot access it.
+                let host = wide(VIRTUAL_HOST);
+                let _ = core3.ClearVirtualHostNameToFolderMapping(PCWSTR(host.as_ptr()));
             }
             self.core.Navigate(PCWSTR(url.as_ptr()))
         }

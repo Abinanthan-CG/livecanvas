@@ -39,9 +39,11 @@ pub fn resolve(source: &str) -> Result<Navigation, String> {
         return Ok(Navigation { url: source.to_owned(), mapping: None });
     }
     if let Some(rest) = lower.strip_prefix("file://") {
-        // `file:///C:/dir/page.html` -> `C:/dir/page.html`; then resolve as a path.
+        // `file:///C:/dir/page.html` or `file://localhost/C:/dir/page.html` -> `C:/dir/page.html`.
         let start = source.len() - rest.len();
-        let path = percent_decode(source[start..].trim_start_matches('/'));
+        let after_scheme = &source[start..];
+        let stripped = if rest.starts_with("localhost/") { &after_scheme["localhost/".len()..] } else { after_scheme };
+        let path = percent_decode(stripped.trim_start_matches('/'));
         return resolve_path(Path::new(&path));
     }
     if let Some((scheme, _)) = lower.split_once("://") {
@@ -57,8 +59,8 @@ pub fn resolve(source: &str) -> Result<Navigation, String> {
     if !source.contains('/') && matches!(extension.as_str(), "html" | "htm") {
         return Err(format!("file `{source}` does not exist"));
     }
-    if looks_like_host(source) {
-        return Ok(Navigation { url: format!("https://{source}"), mapping: None });
+    if let Some(scheme) = bare_host_scheme(source) {
+        return Ok(Navigation { url: format!("{scheme}://{source}"), mapping: None });
     }
     Err(format!("`{source}` is neither an existing file or folder nor a URL"))
 }
@@ -88,14 +90,32 @@ fn resolve_path(path: &Path) -> Result<Navigation, String> {
     })
 }
 
-/// `youtube.com/watch?v=..` style input: no scheme, but clearly a web address.
-fn looks_like_host(s: &str) -> bool {
-    let host = s.split(['/', '?', '#']).next().unwrap_or_default();
-    let host = host.rsplit_once(':').map_or(host, |(name, _port)| name);
+/// Returns the default scheme for a schemeless host (`youtube.com/feed` -> `"https"`,
+/// `localhost:3000` / `127.0.0.1:5173` -> `"http"`), or `None` if `s` is not a host.
+fn bare_host_scheme(s: &str) -> Option<&'static str> {
+    if s.contains(char::is_whitespace) || s.contains('\\') {
+        return None;
+    }
+    let authority = s.split(['/', '?', '#']).next().unwrap_or_default();
+    let host = match authority.rsplit_once(':') {
+        Some((name, port)) => {
+            if !port.parse::<u16>().is_ok_and(|p| p > 0) {
+                return None;
+            }
+            name
+        }
+        None => authority,
+    };
+    let lower_host = host.to_ascii_lowercase();
+    if matches!(lower_host.as_str(), "localhost" | "127.0.0.1" | "0.0.0.0") {
+        return Some("http");
+    }
     let valid_label = |l: &str| !l.is_empty() && l.chars().all(|c| c.is_ascii_alphanumeric() || c == '-');
-    !s.contains(char::is_whitespace)
-        && !s.contains('\\')
-        && (host == "localhost" || (host.contains('.') && host.split('.').all(valid_label)))
+    if lower_host.contains('.') && lower_host.split('.').all(valid_label) {
+        Some("https")
+    } else {
+        None
+    }
 }
 
 /// Percent-encodes one URL path segment (RFC 3986 unreserved characters pass through).
@@ -154,9 +174,13 @@ mod tests {
     }
 
     #[test]
-    fn bare_hosts_get_https() {
+    fn bare_hosts_get_default_scheme() {
         assert_eq!(resolve("youtube.com/feed").unwrap().url, "https://youtube.com/feed");
-        assert_eq!(resolve("localhost:3000").unwrap().url, "https://localhost:3000");
+        assert_eq!(resolve("localhost:3000").unwrap().url, "http://localhost:3000");
+        assert_eq!(resolve("LOCALHOST:8080/app").unwrap().url, "http://LOCALHOST:8080/app");
+        assert_eq!(resolve("127.0.0.1:5173").unwrap().url, "http://127.0.0.1:5173");
+        assert!(resolve("example.com:notaport").is_err());
+        assert!(resolve("localhost:0").is_err());
     }
 
     #[test]
@@ -199,6 +223,35 @@ mod tests {
         assert!(resolve("no-such-page.html").unwrap_err().contains("does not exist"));
         // With a path component it is a web address again.
         assert_eq!(resolve("example.com/page.html").unwrap().url, "https://example.com/page.html");
+    }
+
+    #[test]
+    fn resolves_filenames_with_spaces_and_parentheses() {
+        let dir = scratch("parens");
+        let special = dir.join("golden_singularity_wheat_field_at_night (1).html");
+        fs::write(&special, "<!doctype html>").unwrap();
+        let nav = resolve(special.to_str().unwrap()).unwrap();
+        assert_eq!(
+            nav.url,
+            format!("https://{VIRTUAL_HOST}/golden_singularity_wheat_field_at_night%20%281%29.html")
+        );
+        assert_eq!(nav.mapping.unwrap().folder, dir);
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn resolves_bundled_example_wallpapers() {
+        let workspace = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        for file in [
+            "examples/at_the_edge_of_infinity.html",
+            "examples/golden_singularity_wheat_field_at_night.html",
+        ] {
+            let path = workspace.join(file);
+            let nav = resolve(path.to_str().unwrap()).unwrap();
+            let name = path.file_name().unwrap().to_str().unwrap();
+            assert_eq!(nav.url, format!("https://{VIRTUAL_HOST}/{name}"));
+            assert!(nav.mapping.is_some());
+        }
     }
 
     #[test]

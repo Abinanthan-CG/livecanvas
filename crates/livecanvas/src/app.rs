@@ -21,6 +21,7 @@ use std::{
     fmt::Display,
     fs,
     rc::Rc,
+    time::{Duration, Instant},
 };
 use windows::{
     core::{w, Error, PCWSTR},
@@ -44,6 +45,10 @@ const TIMER_WATCHDOG: usize = 1;
 const WATCHDOG_MS: u32 = 1000;
 /// After a failed attach, wait this many watchdog ticks before retrying.
 const RETRY_TICKS: u32 = 5;
+/// Crashes within this window count toward exponential rebuild backoff.
+const CRASH_WINDOW: Duration = Duration::from_secs(60);
+/// Maximum delay (in watchdog ticks) between crash-triggered rebuilds.
+const MAX_CRASH_BACKOFF_TICKS: u32 = 30;
 const HOTKEY_TOGGLE: i32 = 1;
 /// The built-in wallpaper shown when no source is configured.
 const DEMO_HTML: &str = include_str!("../assets/demo/index.html");
@@ -77,6 +82,8 @@ struct App {
     /// A full-screen window currently hides the wallpaper.
     covered: Cell<bool>,
     retry_in: Cell<u32>,
+    crash_count: Cell<u32>,
+    last_crash: Cell<Option<Instant>>,
     /// A WebView2 start-up failure was already shown to the user.
     reported: Cell<bool>,
     /// Broadcast by the shell when explorer.exe (re)creates the taskbar.
@@ -122,6 +129,8 @@ fn run_loop(config: Config) -> Result<(), String> {
         pumping_input: Cell::new(false),
         covered: Cell::new(false),
         retry_in: Cell::new(0),
+        crash_count: Cell::new(0),
+        last_crash: Cell::new(None),
         reported: Cell::new(false),
         // SAFETY: registers (or looks up) a system-wide message id by name.
         taskbar_created: unsafe { RegisterWindowMessageW(w!("TaskbarCreated")) },
@@ -313,7 +322,7 @@ impl App {
         let weak = Rc::downgrade(self);
         let crashed: Crashed = Rc::new(move || {
             if let Some(app) = weak.upgrade() {
-                app.request_rebuild();
+                app.on_webview_crashed();
             }
         });
         let (width, height) = (attachment.width(), attachment.height());
@@ -338,6 +347,18 @@ impl App {
             }
             Err(e) => self.report_webview_failure(&e),
         }
+    }
+
+    fn on_webview_crashed(&self) {
+        self.teardown();
+        let now = Instant::now();
+        let recent = self.last_crash.get().is_some_and(|t| now.saturating_duration_since(t) <= CRASH_WINDOW);
+        let count = if recent { self.crash_count.get().saturating_add(1) } else { 1 };
+        self.crash_count.set(count);
+        self.last_crash.set(Some(now));
+        let delay = (1u32 << count.min(4)).min(MAX_CRASH_BACKOFF_TICKS);
+        log(&format!("scheduling rebuild in {delay}s after webview crash #{count}"));
+        self.retry_in.set(delay);
     }
 
     fn report_webview_failure(&self, error: &Error) {
@@ -379,6 +400,7 @@ impl App {
                 return;
             }
         }
+        self.crash_count.set(0);
         self.update_config(|config| config.source = source);
         match self.view() {
             Some(view) => self.navigate(&view),

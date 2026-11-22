@@ -186,7 +186,10 @@ mod imp {
         }
 
         if !quiet && confirm("Start LiveCanvas automatically when you sign in to Windows?") {
-            context("enable autostart", Command::new(&exe).args(["--autostart", "on"]).status())?;
+            let status = context("enable autostart", Command::new(&exe).args(["--autostart", "on"]).status())?;
+            if !status.success() {
+                return Err(format!("enable autostart: livecanvas.exe exited with {status}"));
+            }
         }
         context("start LiveCanvas", Command::new(&exe).spawn())?;
         if !quiet {
