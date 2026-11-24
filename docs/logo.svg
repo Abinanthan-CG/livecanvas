@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="LiveCanvas logo">
+  <defs>
+    <linearGradient id="bg" x1="16" y1="8" x2="112" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#2DD4BF"/>
+      <stop offset="52%" stop-color="#0D9488"/>
+      <stop offset="100%" stop-color="#0A4F5C"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="20" y1="10" x2="80" y2="86" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.34"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="20" y1="98" x2="110" y2="28" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#99F6E4" stop-opacity="0.15"/>
+      <stop offset="50%" stop-color="#CCFBF1" stop-opacity="0.72"/>
+      <stop offset="100%" stop-color="#5EEAD4" stop-opacity="0.15"/>
+    </linearGradient>
+    <linearGradient id="play" x1="50" y1="38" x2="88" y2="90" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#CCFBF1"/>
+    </linearGradient>
+    <filter id="shadow" x="-15%" y="-15%" width="130%" height="135%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#042F2E" flood-opacity="0.38"/>
+    </filter>
+  </defs>
+
+  <!-- Rounded squircle tile matching LiveCanvas's teal tray icon -->
+  <rect x="8" y="8" width="112" height="112" rx="28" fill="url(#bg)"/>
+  <rect x="9.5" y="9.5" width="109" height="109" rx="26.5" fill="none" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="2"/>
+
+  <!-- Subtle top-left glass sheen -->
+  <path d="M36 9.5H92C106.6 9.5 118.5 21.4 118.5 36V44C94 56 46 62 9.5 54V36C9.5 21.4 21.4 9.5 36 9.5Z" fill="url(#sheen)"/>
+
+  <!-- Sweeping orbital arc accent -->
+  <ellipse cx="64" cy="66" rx="44" ry="18" transform="rotate(-24 64 66)" fill="none" stroke="url(#ring)" stroke-width="2.6"/>
+
+  <!-- Central rounded play glyph -->
+  <path d="M51 41.5C51 37.9 54.9 35.7 58 37.5L88.5 55.5C91.5 57.3 91.5 61.7 88.5 63.5L58 81.5C54.9 83.3 51 81.1 51 77.5V41.5Z"
+        transform="translate(0 4)" fill="url(#play)" filter="url(#shadow)"/>
+
+  <!-- Luminous star spark -->
+  <circle cx="95" cy="34" r="3.4" fill="#FFFFFF" fill-opacity="0.92"/>
+  <circle cx="95" cy="34" r="6.5" fill="#99F6E4" fill-opacity="0.28"/>
+</svg>

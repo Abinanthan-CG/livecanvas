@@ -1,17 +1,20 @@
 <div align="center">
 
+<img src="docs/logo.svg" alt="LiveCanvas logo" width="96" height="96">
+
 # LiveCanvas
 
 **Interactive HTML, WebGL, and Web-App Live Wallpapers for Windows 11**
 
-Run any local `.html` file, Three.js scene, folder with `index.html`, or website **behind your desktop icons** — fully clickable, draggable, and scrollable — powered directly by Windows' built-in WebView2 runtime in a single native Rust binary.
+Turn any local `.html` file, Three.js scene, web folder, or live URL into a clickable, draggable, scrollable desktop wallpaper **behind your desktop icons**—powered directly by Windows' built-in WebView2 runtime in a single native Rust binary.
 
+[![Release](https://img.shields.io/github/v/release/Abinanthan-CG/livecanvas?color=0d9488&label=release)](https://github.com/Abinanthan-CG/livecanvas/releases/latest)
 [![Build](https://github.com/Abinanthan-CG/livecanvas/actions/workflows/build.yml/badge.svg)](https://github.com/Abinanthan-CG/livecanvas/actions/workflows/build.yml)
 ![Platform](https://img.shields.io/badge/platform-Windows%2011%20%7C%2010%20(x64%20%2F%20ARM64)-0078D4?logo=windows&logoColor=white)
 ![Rust](https://img.shields.io/badge/written%20in-Rust-DEA584?logo=rust&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-2ea44f)
 
-[Showcase](#live-examples) · [Features](#features) · [Install](#install) · [Usage](#usage) · [Configuration](#configuration) · [Build from Source](#build-from-source)
+[**Download Installer (`v1.0.1`)**](https://github.com/Abinanthan-CG/livecanvas/releases/latest/download/livecanvas-setup.exe) · [**Portable `.exe`**](https://github.com/Abinanthan-CG/livecanvas/releases/latest/download/livecanvas.exe) · [**Live Examples**](#live-examples) · [**Configuration**](#configuration) · [**Build from Source**](#build-from-source)
 
 <br>
 
@@ -21,66 +24,72 @@ Run any local `.html` file, Three.js scene, folder with `index.html`, or website
 
 </div>
 
-## Features
+## Why LiveCanvas?
 
-- **Zero runtime bloat:** Uses the Evergreen WebView2 runtime already built into Windows 11. No Electron, no Tauri runtime, no Node.js, and statically linked CRT so `livecanvas.exe` is a single portable file.
-- **Truly interactive behind desktop icons:** Forwards mouse movement, clicks, double-clicks, drag, scroll wheels, and optional keyboard focus to your wallpaper while keeping desktop icons clickable (via MSAA hit-testing) and never injecting code into `explorer.exe`.
-- **Game & battery friendly:** Automatically hides and suspends the WebView2 renderer (freeing CPU, GPU, and RAM) whenever a full-screen game or video covers the desktop.
-- **Real HTTPS origin for local files:** Maps local folders onto `https://livecanvas.example/` with `DENY_CORS` isolation so ES modules, sibling `fetch()`, shaders, and `localStorage` work just like a web server—and clears the mapping whenever you switch to a remote URL.
-- **Persistent logins & sessions:** Cookies and storage persist in `%LOCALAPPDATA%\LiveCanvas\WebView2`, so web apps and dashboards stay signed in across reboots.
-- **Resilient by design:** Re-attaches automatically after `explorer.exe` restarts or monitor layout changes, supports both classic (`WorkerW`) and Windows 11 24H2+ raised-desktop layouts, and applies exponential backoff on renderer crashes.
-- **No administrator rights:** Installs per-user into `%LOCALAPPDATA%\Programs\LiveCanvas` with Start Menu and Windows Settings integration.
+| | |
+| --- | --- |
+| **Zero runtime bloat** | Uses the Evergreen WebView2 runtime already shipped with Windows 11. No Electron, no Tauri, no Node.js—just a single statically linked `~584 KB` portable Rust binary. |
+| **Interactive behind desktop icons** | Forwards mouse hover, clicks, double-clicks, drag, scroll wheels, and optional keyboard focus while preserving normal desktop icon clicks via MSAA hit-testing—with zero DLL injection into `explorer.exe`. |
+| **Game & battery friendly** | Automatically hides and suspends the WebView2 renderer (freeing CPU, GPU, and RAM) whenever a full-screen game or video covers the desktop. |
+| **Secure local HTTPS origin** | Maps local folders to `https://livecanvas.example/` with `DENY_CORS` isolation so ES modules, sibling `fetch()`, shaders, and `localStorage` work like a real server—and clears the mapping when switching to remote URLs. |
+| **Persistent logins & sessions** | Cookies and storage persist in `%LOCALAPPDATA%\LiveCanvas\WebView2`, so web apps, music players, and dashboards stay signed in across reboots. |
+| **Resilient & zero admin rights** | Installs per-user with no UAC prompt, re-attaches after `explorer.exe` restarts or display changes, supports Windows 11 24H2+ raised desktops, and applies exponential backoff on renderer crashes. |
 
 ## Live Examples
 
-Three interactive wallpapers ship in this repository so you can test mouse forwarding, orbit controls, scroll zoom, keyboard shortcuts, and adaptive frame-rate throttling right away.
+Three interactive wallpapers ship with LiveCanvas so you can test orbit controls, scroll zoom, parallax, keyboard focus, and adaptive frame-rate throttling immediately.
 
-### 1. At the Edge of Infinity (`examples/at_the_edge_of_infinity.html`)
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="examples/at_the_edge_of_infinity.html">
+        <img src="docs/screenshots/at_the_edge_of_infinity.jpg" alt="At the Edge of Infinity — interactive Three.js orbital dust river" width="100%">
+      </a>
+      <br><br>
+      <strong>At the Edge of Infinity</strong><br>
+      <code>examples/at_the_edge_of_infinity.html</code><br><br>
+      165,000 orbiting starlight particles, HDR bloom, a lone silhouetted traveler, 60 / 30 / 15 fps adaptive idle loop, and automatic 2D Canvas fallback.<br><br>
+      <strong>Controls:</strong> Drag to orbit · Scroll to zoom · Hover parallax · Double-click or <code>R</code> to reset · <code>Space</code> to pause · Arrow keys / <code>+</code> <code>-</code>
+    </td>
+    <td width="50%" valign="top">
+      <a href="examples/golden_singularity_wheat_field_at_night.html">
+        <img src="docs/screenshots/golden_singularity_wheat_field_at_night.jpg" alt="Golden Singularity — Wheat Field at Night" width="100%">
+      </a>
+      <br><br>
+      <strong>Golden Singularity — Wheat Field at Night</strong><br>
+      <code>examples/golden_singularity_wheat_field_at_night.html</code><br><br>
+      68,000 instanced wind-blown wheat stalks, glowing farmhouse, pickup truck, and a towering golden accretion arc with a 60 / 30 fps eco loop.<br><br>
+      <strong>Controls:</strong> Drag to orbit · Scroll to zoom · Hover parallax · Double-click to reset
+    </td>
+  </tr>
+</table>
 
-<img src="docs/screenshots/at_the_edge_of_infinity.jpg" alt="At the Edge of Infinity — interactive Three.js orbital dust river" width="100%">
+```powershell
+# Launch either Three.js example from PowerShell (or pick it via Tray → Use HTML file...)
+.\livecanvas.exe .\examples\at_the_edge_of_infinity.html
+.\livecanvas.exe --set .\examples\golden_singularity_wheat_field_at_night.html
+```
 
-A sweeping river of 165,000 orbiting starlight particles with HDR bloom, a lone silhouetted traveler, an adaptive 60 / 30 / 15 fps idle loop, and an automatic 2D Canvas fallback.
+> **Note:** Both Three.js examples load `three.min.js` (`r128`) from cdnjs on first run; WebView2 caches it in `%LOCALAPPDATA%\LiveCanvas\WebView2` afterward.
 
-- **Controls:** Drag to orbit · Scroll to zoom · Move mouse for parallax · Double-click or `R` to reset · `Space` to pause · Arrow keys / `+` `-` to adjust view
-- **Launch:**
-  ```powershell
-  .\livecanvas.exe .\examples\at_the_edge_of_infinity.html
-  ```
-
-### 2. Golden Singularity — Wheat Field at Night (`examples/golden_singularity_wheat_field_at_night.html`)
-
-<img src="docs/screenshots/golden_singularity_wheat_field_at_night.jpg" alt="Golden Singularity — Wheat Field at Night" width="100%">
-
-68,000 instanced wind-blown wheat stalks, a warm-lit farmhouse and pickup truck, and a towering golden accretion arc with a 60 / 30 fps eco loop.
-
-- **Controls:** Drag to orbit · Scroll to zoom · Move mouse for subtle camera parallax · Double-click to reset
-- **Launch:**
-  ```powershell
-  .\livecanvas.exe --set .\examples\golden_singularity_wheat_field_at_night.html
-  ```
-
-> **Note:** Both Three.js examples fetch `three.min.js` (`r128`) from cdnjs on first load; WebView2 caches it in `%LOCALAPPDATA%\LiveCanvas\WebView2` afterward.
-
-### 3. Built-in Interactive Demo (Default)
+### Built-in Interactive Demo (Default)
 
 <img src="docs/screenshots/builtin_demo.png" alt="LiveCanvas built-in interactive constellation and clock demo" width="100%">
 
-Shown automatically on first launch when no `source` is configured. Features an interactive particle constellation, live clock, pointer/click/scroll telemetry, and a keyboard input box to verify focus forwarding.
+Shown automatically on first launch when no `source` is configured. Includes an interactive particle constellation, live clock, pointer/click/scroll telemetry, and a keyboard input box to verify focus forwarding.
 
-## Install
+## Quick Start
 
-Download the latest `livecanvas-setup.exe` or portable `livecanvas.exe` from [**GitHub Releases**](https://github.com/Abinanthan-CG/livecanvas/releases) (or grab the latest CI build from the [**Actions**](https://github.com/Abinanthan-CG/livecanvas/actions/workflows/build.yml) tab).
+1. Download [**`livecanvas-setup.exe`**](https://github.com/Abinanthan-CG/livecanvas/releases/latest/download/livecanvas-setup.exe) (per-user installer, no admin rights) or [**`livecanvas.exe`**](https://github.com/Abinanthan-CG/livecanvas/releases/latest/download/livecanvas.exe) (portable single binary) from [**Releases**](https://github.com/Abinanthan-CG/livecanvas/releases/latest).
+2. Run LiveCanvas—the built-in interactive demo appears immediately behind your desktop icons.
+3. Click the **LiveCanvas** tray icon to pick an `.html` file, a folder with `index.html`, or a URL from your clipboard.
+4. Press **`Ctrl+Alt+I`** anytime to toggle mouse interactivity on or off.
 
-- **Installer (`livecanvas-setup.exe`):** Installs per-user into `%LOCALAPPDATA%\Programs\LiveCanvas`, creates a Start Menu shortcut, registers in Windows **Settings → Apps → Installed apps**, and never asks for elevation. Uninstall from Windows Settings or via `uninstall.exe --uninstall`.
-- **Portable (`livecanvas.exe`):** Run directly from any folder. Settings and WebView2 profile data are stored in `%LOCALAPPDATA%\LiveCanvas`.
+The installer places files in `%LOCALAPPDATA%\Programs\LiveCanvas`, adds a Start Menu shortcut, and registers in **Settings → Apps → Installed apps** (uninstall from Windows Settings or with `uninstall.exe --uninstall`).
 
-## Usage
+## Usage & CLI
 
-Right-click or left-click the **LiveCanvas** tray icon to pick an `.html` file, pick a folder with `index.html`, load a URL or path from your clipboard, toggle interactivity/keyboard focus/mute, open DevTools, or edit `config.toml`.
-
-Press **`Ctrl+Alt+I`** anywhere to toggle mouse forwarding on or off.
-
-### Command Line
+Right-click or left-click the tray icon for file/folder pickers, clipboard URL/path loading, interactivity/keyboard/mute toggles, DevTools, autostart, and `config.toml` editing.
 
 ```text
 livecanvas.exe [SOURCE]         URL, .html file, or folder with index.html
@@ -92,11 +101,11 @@ livecanvas.exe --autostart <on|off>
 livecanvas.exe --quit           Stop the running instance
 ```
 
-Bare local dev addresses such as `localhost:3000` or `127.0.0.1:5173` automatically resolve to `http://`; remote domains without a scheme default to `https://`.
+Bare local dev addresses (`localhost:3000`, `127.0.0.1:5173`) default to `http://`; remote domains without a scheme default to `https://`.
 
 ## Configuration
 
-Settings live in `%LOCALAPPDATA%\LiveCanvas\config.toml`. After editing, click **Apply config.toml** in the tray menu.
+Settings live in `%LOCALAPPDATA%\LiveCanvas\config.toml`. After editing, select **Apply config.toml** from the tray menu.
 
 | Key | Default | Description |
 | --- | --- | --- |
@@ -114,14 +123,14 @@ Settings live in `%LOCALAPPDATA%\LiveCanvas\config.toml`. After editing, click *
 
 ## Build from Source
 
-Requirements: Windows 10/11, stable Rust (MSVC toolchain), and Visual Studio Build Tools ("Desktop development with C++").
+Requirements: Windows 10/11, stable Rust (MSVC toolchain), and Visual Studio Build Tools (*Desktop development with C++*).
 
 ```powershell
 .\build.ps1                                  # x64  -> .\dist\livecanvas.exe + livecanvas-setup.exe
 .\build.ps1 -Target aarch64-pc-windows-msvc  # ARM64
 ```
 
-`build.ps1` runs `cargo test -p livecanvas-core`, compiles `livecanvas.exe`, and then compiles `livecanvas-setup.exe` with `livecanvas.exe` embedded as its payload.
+`build.ps1` runs `cargo test -p livecanvas-core`, builds `livecanvas.exe`, and then builds `livecanvas-setup.exe` with `livecanvas.exe` embedded as its payload.
 
 <details>
 <summary><strong>Architecture, Verification Status & Known Limitations</strong></summary>
