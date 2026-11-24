@@ -32,7 +32,7 @@ dependencies = [
 
 [[package]]
 name = "livecanvas"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "embed-manifest",
  "livecanvas-core",
@@ -44,7 +44,7 @@ dependencies = [
 
 [[package]]
 name = "livecanvas-core"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "serde",
  "toml",
@@ -52,7 +52,7 @@ dependencies = [
 
 [[package]]
 name = "livecanvas-setup"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "embed-manifest",
  "windows",
